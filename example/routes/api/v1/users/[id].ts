@@ -1,4 +1,4 @@
-import type { VollRequest } from "../../../../../src"
+import type { VollRequest } from "volljs"
 
 export default function(request: VollRequest) {
     const userId = request.params.id

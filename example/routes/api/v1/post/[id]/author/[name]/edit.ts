@@ -1,7 +1,7 @@
 import type {
     VollRequest,
     VollResponse
-} from "../../../../../../../../src/index"
+} from "volljs"
 export function GET(request: VollRequest, response: VollResponse) {
     const userId = request.params.id
     const authorName = request.params.name

@@ -1,4 +1,4 @@
-import type { VollRequest, VollResponse } from "../../../../../src"
+import type { VollRequest, VollResponse } from "volljs"
 
 export default function GET(request: VollRequest, response: VollResponse) {
     const params = request.params
