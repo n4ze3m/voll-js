@@ -8,6 +8,8 @@ import type {
 } from "./types";
 import type { VollRequest } from "./types/http";
 import { VollResponse } from "./http/response";
+import { matchRoute } from "./utils/match-route";
+import { buildRoutePath } from "./utils/build-route";
 
 export class Voll {
     private routesDir: string = "routes";
@@ -72,7 +74,7 @@ export class Voll {
                     continue;
                 }
 
-                const routePath = this.buildRoutePath(currentPath, file.name);
+                const routePath = buildRoutePath(currentPath, file.name);
                 const fileParams = this.extractParams(file.name);
                 if (fileParams.length > 0) {
                     this.routeParams.set(routePath, new Set(fileParams));
@@ -109,29 +111,6 @@ export class Voll {
             console.error("Error loading routes:", error);
         }
     }
-
-    private buildRoutePath(currentPath: string, file: string): string {
-        let route = file.replace(/\.(ts|tsx|js|jsx)$/, "");
-
-        if (route === "index") {
-            return currentPath
-                ? `/${currentPath}`.replace(/\[(\w+)\]/g, ":$1")
-                : "/";
-        }
-
-        currentPath = currentPath.replace(/\[(\w+)\]/g, ":$1");
-        route = route.replace(/\[(\w+)\]/g, ":$1");
-
-        const finalPath = currentPath
-            ? `/${currentPath}/${route}`
-            : `/${route}`;
-
-        return finalPath
-            .split('\\').join('/')
-            .replace(/\/+/g, '/');
-    }
-
-
 
     private displayRoutes() {
         console.log('\n🚀 Available Routes:');
@@ -177,7 +156,7 @@ export class Voll {
                     }
                 }
                 for (const route in this.routes) {
-                    const params = this.matchRoute(pathname, route);
+                    const params = matchRoute(pathname, route);
                     if (params) {
                         const routeHandlers = this.routes[route];
                         const handler = routeHandlers[method] || routeHandlers["default"];
@@ -208,30 +187,4 @@ export class Voll {
         });
     };
 
-    private matchRoute(
-        pathname: string,
-        route: string
-    ): Record<string, string> | null {
-        const pathnameSegments = pathname.split("/");
-        const routeSegments = route.split("/");
-
-        if (pathnameSegments.length !== routeSegments.length) {
-            return null;
-        }
-
-        const params: Record<string, string> = {};
-
-        for (let i = 0; i < routeSegments.length; i++) {
-            const routeSegment = routeSegments[i];
-            const pathnameSegment = pathnameSegments[i];
-
-            if (routeSegment.startsWith(":")) {
-                params[routeSegment.slice(1)] = pathnameSegment;
-            } else if (routeSegment !== pathnameSegment) {
-                return null;
-            }
-        }
-
-        return params;
-    }
 }
