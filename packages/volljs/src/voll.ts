@@ -10,6 +10,7 @@ import type { VollRequest } from "./types/http";
 import { VollResponse } from "./http/response";
 import { matchRoute } from "./utils/match-route";
 import { buildRoutePath } from "./utils/build-route";
+import { generateRouteTypes } from "./utils/generate-route-types";
 
 export class Voll {
     private routesDir: string = "routes";
@@ -132,6 +133,7 @@ export class Voll {
         }
 
         await this.loadRoutes();
+        await generateRouteTypes(this.routesDir);
 
         if (this.showRoutes) {
             this.displayRoutes();

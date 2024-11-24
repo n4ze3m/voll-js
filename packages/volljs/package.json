@@ -1,13 +1,10 @@
 {
-  "name": "voll-js",
-  "module": "index.ts",
+  "name": "core",
+  "module": "./dist/index.ts",
+  "exports": "./dist/index.ts",
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "example/*"
-  ],
   "scripts": {
-    "build": "bun build --target=node ./packages/core/src/index.ts --outfile=dist/index.js && bun run build:declaration",
+    "build": "bun build --target=node ./src/index.ts --outfile=dist/index.js && bun run build:declaration",
     "build:declaration": "tsc --emitDeclarationOnly --project tsconfig.types.json",
     "postbuild": "rimraf tsconfig.types.tsbuildinfo"
   },
@@ -17,9 +14,5 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
-  },
-  "files": [
-    "dist/*.js",
-    "dist/*.d.ts"
-  ]
+  }
 }

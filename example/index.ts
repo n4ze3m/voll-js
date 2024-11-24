@@ -1,5 +1,4 @@
-import { Voll } from "../src/index"
-
+import { Voll } from "volljs"
 const app = new Voll({
     routesDir: "routes",
     showRoutes: true
