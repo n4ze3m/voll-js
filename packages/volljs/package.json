@@ -1,16 +1,17 @@
 {
   "name": "core",
-  "module": "./dist/index.js",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "bun build --target=node ./src/index.ts --outfile=dist/index.js && bun run build:declaration",
-    "build:declaration": "tsc --emitDeclarationOnly --project tsconfig.types.json",
-    "postbuild": "rimraf tsconfig.types.tsbuildinfo"
+    "build": "bun build.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

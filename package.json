@@ -6,11 +6,6 @@
     "packages/*",
     "example/*"
   ],
-  "scripts": {
-    "build": "bun build --target=node ./packages/core/src/index.ts --outfile=dist/index.js && bun run build:declaration",
-    "build:declaration": "tsc --emitDeclarationOnly --project tsconfig.types.json",
-    "postbuild": "rimraf tsconfig.types.tsbuildinfo"
-  },
   "devDependencies": {
     "@types/bun": "latest",
     "rimraf": "^6.0.1"
