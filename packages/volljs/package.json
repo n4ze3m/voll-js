@@ -1,7 +1,7 @@
 {
   "name": "core",
-  "module": "./dist/index.ts",
-  "exports": "./dist/index.ts",
+  "module": "./dist/index.js",
+  "exports": "./dist/index.js",
   "type": "module",
   "scripts": {
     "build": "bun build --target=node ./src/index.ts --outfile=dist/index.js && bun run build:declaration",
