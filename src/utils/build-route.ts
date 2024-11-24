@@ -3,12 +3,12 @@ export function buildRoutePath(currentPath: string, file: string): string {
 
     if (route === "index") {
         return currentPath
-            ? `/${currentPath}`.replace(/\[(\w+)\]/g, ":$1")
+            ? `/${currentPath}`.replace(/\[\.\.\.(\w+)\]/g, "$1*").replace(/\[(\w+)\]/g, ":$1")
             : "/";
     }
 
-    currentPath = currentPath.replace(/\[(\w+)\]/g, ":$1");
-    route = route.replace(/\[(\w+)\]/g, ":$1");
+    currentPath = currentPath.replace(/\[\.\.\.(\w+)\]/g, "$1*").replace(/\[(\w+)\]/g, ":$1");
+    route = route.replace(/\[\.\.\.(\w+)\]/g, "$1*").replace(/\[(\w+)\]/g, ":$1");
 
     const finalPath = currentPath
         ? `/${currentPath}/${route}`
