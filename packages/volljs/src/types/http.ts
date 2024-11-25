@@ -4,7 +4,7 @@ import { StatusCode } from "./stats-code";
 /**
  * Extended Request interface with Voll.js specific properties
  */
-export interface VollRequest extends Request {
+export interface VollRequest extends Omit<Request, 'headers'> {
     /** URL parameters extracted from route pattern */
     params: Record<string, string>;
     /** Query string parameters parsed from URL */
@@ -12,7 +12,9 @@ export interface VollRequest extends Request {
     /** Request body data */
     body: any;
     /** Remote IP address of the client */
-    ip?:  SocketAddress | null
+    ip?:  SocketAddress | null;
+    
+    headers: Record<string, string>;
 }
 
 /**

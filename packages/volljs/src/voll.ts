@@ -222,22 +222,24 @@ export class Voll {
                                     }
                                 }
                             }
-
+                            // get headers 
                             const vollRequest = {
                                 ...request,
                                 params,
                                 query: query,
                                 body: body,
                                 ip: ip,
+                                headers: request.headers as unknown as Record<string, string>,
                             } as VollRequest;
                             const vollResponse = new VollResponse();
+                            // middleware code
                             const executeMiddleware = async () => {
                                 if (handlerConfig) {
                                     const middlewareList: MiddlewareFunction[] =
                                         //@ts-expect-error handlerConfig typing
                                         handlerConfig[method]?.middleware || handlerConfig.middleware || [];
-
-                                    for (const middleware of middlewareList) {
+                                    for (let i = 0; i < middlewareList.length; i++) {
+                                        const middleware = middlewareList[i];
                                         let nextCalled = false;
                                         await middleware(vollRequest, vollResponse, async () => {
                                             nextCalled = true;
@@ -276,4 +278,21 @@ export class Voll {
             console.log(`[🚀 Voll Listening on ${this.server.hostname}:${this.server.port}] ✨`);
         }
     };
+
+
+    stop() {
+        try {
+            this.server?.stop();
+            this.routes = {};
+            this.routeParams.clear();
+            this.server?.stop();
+            if (global?.gc) {
+                global.gc();
+            }
+            console.log(`[💀 Voll Stopped] ✨`);
+            process.exit(0);
+        } catch (e) {
+            console.error(e);
+        }
+    }
 }

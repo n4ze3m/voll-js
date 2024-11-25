@@ -24,7 +24,6 @@ export const config: VollConfig = {
                         required: ["name", "age"]
                     },
                 },
-                additionalProperties: false
             }
         }
     }
@@ -34,6 +33,8 @@ export const config: VollConfig = {
 export function GET(request: VollRequest, response: VollResponse) {
     const userId = request.params.id
     const authorName = request.params.name
+    const headers = request.headers
+    console.log(JSON.stringify(headers,))
     return response.statusCode(200).sendJson({
         message: `Author post ID: ${userId} ${authorName}`
     })
