@@ -12,8 +12,8 @@ export interface VollRequest extends Omit<Request, 'headers'> {
     /** Request body data */
     body: any;
     /** Remote IP address of the client */
-    ip?:  SocketAddress | null;
-    
+    ip?: SocketAddress | null;
+
     headers: Record<string, string>;
 }
 
@@ -50,8 +50,15 @@ export interface VollResponse extends Omit<Response, 'json'> {
      * @param data - Data to be serialized as JSON
      */
     json(data: any): Response;
-}
 
+    /**
+     * Sets a response header
+     * 
+     * @param name - Header name
+     * @param value - Header value
+     */
+    setHeader(name: string, value: string): this;
+}
 /**
  * Middleware next function type
  * Used to call the next middleware in chain
