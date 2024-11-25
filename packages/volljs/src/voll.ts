@@ -16,6 +16,7 @@ export class Voll {
     private routeParams: Map<string, Set<string>> = new Map();
     private showRoutes: boolean = false;
     private parseJson: boolean = true;
+    private server: Server | undefined;
 
     constructor(options?: VollOptions) {
         this.routesDir = options?.routesDir || this.routesDir;
@@ -126,7 +127,7 @@ export class Voll {
         console.log("\n==================\n");
     }
 
-    listen = async (options: number | Partial<Server>) => {
+    listen = async (options: number | Partial<Server>, callback?: (server: Server) => void) => {
 
         if (typeof Bun === "undefined") {
             throw new Error("Voll is only available in Bun");
@@ -146,9 +147,9 @@ export class Voll {
             optionsObj = options;
         }
 
-        Bun.serve({
+        this.server = Bun.serve({
             ...optionsObj,
-            fetch: async (request: Request) => {
+            fetch: async (request: Request, server: Server) => {
                 const url = new URL(request.url);
                 const pathname = url.pathname;
                 const method = request.method as HttpMethod;
@@ -163,6 +164,7 @@ export class Voll {
                         }
                     }
                 }
+                const ip = server.requestIP(request);
                 for (const route in this.routes) {
                     let params = matchRoute(pathname, route);
                     if (params) {
@@ -226,6 +228,7 @@ export class Voll {
                                 params,
                                 query: query,
                                 body: body,
+                                ip: ip,
                             } as VollRequest;
                             const vollResponse = new VollResponse();
                             const executeMiddleware = async () => {
@@ -240,7 +243,7 @@ export class Voll {
                                             nextCalled = true;
                                         });
                                         if (!nextCalled) {
-                                            const response =  vollResponse.getResponse();
+                                            const response = vollResponse.getResponse();
                                             if (response) {
                                                 return response
                                             }
@@ -266,5 +269,11 @@ export class Voll {
                 return new Response("Not Found", { status: 404 });
             },
         });
+
+        if (callback) {
+            callback(this.server);
+        } else {
+            console.log(`[🚀 Voll Listening on ${this.server.hostname}:${this.server.port}] ✨`);
+        }
     };
 }

@@ -1,3 +1,4 @@
+import { SocketAddress } from "bun";
 import { StatusCode } from "./stats-code";
 
 /**
@@ -10,6 +11,8 @@ export interface VollRequest extends Request {
     query: Record<string, string>;
     /** Request body data */
     body: any;
+    /** Remote IP address of the client */
+    ip?:  SocketAddress | null
 }
 
 /**
