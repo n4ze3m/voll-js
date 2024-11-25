@@ -1,5 +1,6 @@
 import { Blob } from "buffer";
 import { VollResponse as IVollResponse } from "../types/http";
+import { StatusCode } from "@/types/stats-code";
 
 export class VollResponse implements IVollResponse {
     private response: Response;
@@ -51,7 +52,7 @@ export class VollResponse implements IVollResponse {
         return headers;
     }
 
-    statusCode(code: number): this {
+    statusCode(code: StatusCode | number): this {
         this.response = new Response(null, {
             status: code,
             headers: this.response.headers,

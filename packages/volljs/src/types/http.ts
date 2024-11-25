@@ -1,3 +1,4 @@
+import { StatusCode } from "./stats-code";
 
 export interface VollRequest extends Request {
     params: Record<string, string>;
@@ -6,7 +7,7 @@ export interface VollRequest extends Request {
 }
 
 export interface VollResponse extends Omit<Response, 'json'> {
-    statusCode(code: number): this;
+    statusCode(code: StatusCode | number): this;
     sendJson(data: any): Response;
     send(data: string): Response;
     sendStatus(code: number): Response;

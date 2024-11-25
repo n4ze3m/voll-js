@@ -1,7 +1,36 @@
 import type {
     VollRequest,
-    VollResponse
-} from "volljs"
+    VollResponse,
+    VollConfig
+} from "../../../../../../../../packages/volljs/src"
+
+export const config: VollConfig = {
+    POST: {
+        schema: {
+            body: {
+                type: "object",
+                required: ["data"],
+                properties: {
+                    data: {
+                        type: "object",
+                        properties: {
+                            name: {
+                                type: "string"
+                            },
+                            age: {
+                                type: "number"
+                            }
+                        },
+                        required: ["name", "age"]
+                    },
+                },
+                additionalProperties: false
+            }
+        }
+    }
+}
+
+
 export function GET(request: VollRequest, response: VollResponse) {
     const userId = request.params.id
     const authorName = request.params.name

@@ -1,11 +1,6 @@
 {
   "name": "voll-js",
   "module": "index.ts",
-  "type": "module",
-  "workspaces": [
-    "packages/*",
-    "example/*"
-  ],
   "devDependencies": {
     "@types/bun": "latest",
     "rimraf": "^6.0.1"
@@ -16,5 +11,13 @@
   "files": [
     "dist/*.js",
     "dist/*.d.ts"
+  ],
+  "scripts": {
+    "build": "cd packages/volljs && bun build.ts"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "example/*"
   ]
 }

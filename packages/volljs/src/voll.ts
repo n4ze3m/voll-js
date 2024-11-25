@@ -1,190 +1,212 @@
 import type { Serve, Server } from "bun";
 import { join } from "path";
 import { readdir } from "node:fs/promises";
-import type {
-    VollOptions,
-    HttpMethod,
-    RouteHandlers,
-} from "./types";
+import type { VollOptions, HttpMethod, RouteHandlers } from "./types";
 import type { VollRequest } from "./types/http";
 import { VollResponse } from "./http/response";
 import { matchRoute } from "./utils/match-route";
 import { buildRoutePath } from "./utils/build-route";
+import { RouteSchema } from "./types/config";
+import { createConfigValidator } from "./validators/config";
+import { BAD_REQUEST } from "./types/stats-code";
 
 export class Voll {
-    private routesDir: string = "routes";
-    private routes: RouteHandlers = {};
-    private routeParams: Map<string, Set<string>> = new Map();
-    private showRoutes: boolean = false;
-    private parseJson: boolean = true;
+  private routesDir: string = "routes";
+  private routes: RouteHandlers = {};
+  private routeParams: Map<string, Set<string>> = new Map();
+  private showRoutes: boolean = false;
+  private parseJson: boolean = true;
 
-    constructor(options?: VollOptions) {
-        this.routesDir = options?.routesDir || this.routesDir;
-        this.showRoutes = options?.showRoutes || false;
-        this.parseJson = options?.parseJson || this.parseJson;
+  constructor(options?: VollOptions) {
+    this.routesDir = options?.routesDir || this.routesDir;
+    this.showRoutes = options?.showRoutes || false;
+    this.parseJson = options?.parseJson || this.parseJson;
+  }
+
+  private extractParams(route: string): string[] {
+    const params: string[] = [];
+    const matches = route.match(/\[(\w+)\]/g);
+    if (matches) {
+      matches.forEach((match) => {
+        params.push(match.slice(1, -1));
+      });
     }
+    return params;
+  }
 
-    private extractParams(route: string): string[] {
-        const params: string[] = [];
-        const matches = route.match(/\[(\w+)\]/g);
-        if (matches) {
-            matches.forEach((match) => {
-                params.push(match.slice(1, -1));
-            });
+  private validateParams(currentPath: string, params: string[]) {
+    const parentPath = currentPath.split("/").slice(0, -1).join("/");
+    if (parentPath && this.routeParams.has(parentPath)) {
+      const parentParams = this.routeParams.get(parentPath)!;
+      params.forEach((param) => {
+        if (parentParams.has(param)) {
+          console.warn(
+            `Warning: Parameter "${param}" in route "${currentPath}" conflicts with parent route "${parentPath}"`
+          );
         }
-        return params;
+      });
     }
+  }
 
-    private validateParams(currentPath: string, params: string[]) {
-        const parentPath = currentPath.split("/").slice(0, -1).join("/");
-        if (parentPath && this.routeParams.has(parentPath)) {
-            const parentParams = this.routeParams.get(parentPath)!;
-            params.forEach((param) => {
-                if (parentParams.has(param)) {
-                    console.warn(
-                        `Warning: Parameter "${param}" in route "${currentPath}" conflicts with parent route "${parentPath}"`
-                    );
-                }
-            });
+  private async loadRoutes(currentPath: string = "") {
+    try {
+      const files = await readdir(join(this.routesDir, currentPath), {
+        withFileTypes: true,
+      });
+
+      for (const file of files) {
+        if (file.isDirectory()) {
+          const dirPath = join(currentPath, file.name).split("\\").join("/");
+          const dirParams = this.extractParams(file.name);
+          if (dirParams.length > 0) {
+            this.routeParams.set(dirPath, new Set(dirParams));
+            this.validateParams(dirPath, dirParams);
+          }
+          await this.loadRoutes(dirPath);
+          continue;
         }
-    }
 
-    private async loadRoutes(currentPath: string = "") {
-        try {
-            const files = await readdir(join(this.routesDir, currentPath), {
-                withFileTypes: true,
-            });
-
-            for (const file of files) {
-                if (file.isDirectory()) {
-                    const dirPath = join(currentPath, file.name).split('\\').join('/');
-                    const dirParams = this.extractParams(file.name);
-                    if (dirParams.length > 0) {
-                        this.routeParams.set(dirPath, new Set(dirParams));
-                        this.validateParams(dirPath, dirParams);
-                    }
-                    await this.loadRoutes(dirPath);
-                    continue;
-                }
-
-
-                if (
-                    ![".ts", ".tsx", ".js", ".jsx"].some((ext) => file.name.endsWith(ext))
-                ) {
-                    continue;
-                }
-
-                const routePath = buildRoutePath(currentPath, file.name);
-                const fileParams = this.extractParams(file.name);
-                if (fileParams.length > 0) {
-                    this.routeParams.set(routePath, new Set(fileParams));
-                    this.validateParams(routePath, fileParams);
-                }
-
-                const module = await import(
-                    join(process.cwd(), this.routesDir, currentPath, file.name)
-                );
-
-                this.routes[routePath] = {};
-
-                const methods: HttpMethod[] = [
-                    "GET",
-                    "POST",
-                    "PUT",
-                    "DELETE",
-                    "PATCH",
-                    "OPTIONS",
-                    "HEAD",
-                    "default",
-                ];
-                methods.forEach((method) => {
-                    if (module[method]) {
-                        this.routes[routePath][method] = module[method];
-                    }
-                });
-
-                if (module.default) {
-                    this.routes[routePath]["default"] = module.default;
-                }
-            }
-        } catch (error) {
-            console.error("Error loading routes:", error);
+        if (
+          ![".ts", ".tsx", ".js", ".jsx"].some((ext) => file.name.endsWith(ext))
+        ) {
+          continue;
         }
-    }
 
-    private displayRoutes() {
-        console.log('\n🚀 Available Routes:');
-        console.log('==================');
-        Object.entries(this.routes).forEach(([path, handlers]) => {
-            console.log(`\n📍 ${path}`);
-            Object.keys(handlers).forEach((method) => {
-                const color = method === 'default' ? '\x1b[90m' : '\x1b[36m';
-                console.log(`  ${color}${method}\x1b[0m`);
-            });
+        const routePath = buildRoutePath(currentPath, file.name);
+        const fileParams = this.extractParams(file.name);
+        if (fileParams.length > 0) {
+          this.routeParams.set(routePath, new Set(fileParams));
+          this.validateParams(routePath, fileParams);
+        }
+
+        const module = await import(
+          join(process.cwd(), this.routesDir, currentPath, file.name)
+        );
+
+        this.routes[routePath] = {};
+
+        const methods: HttpMethod[] = [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "PATCH",
+          "OPTIONS",
+          "HEAD",
+          "default",
+        ];
+        methods.forEach((method) => {
+          if (module[method]) {
+            this.routes[routePath][method] = module[method];
+          }
         });
-        console.log('\n==================\n');
+
+        if (module.default) {
+          this.routes[routePath]["default"] = module.default;
+        }
+
+        if (module.config) {
+          this.routes[routePath]["config"] = module.config;
+        }
+      }
+    } catch (error) {
+      console.error("Error loading routes:", error);
+    }
+  }
+
+  private displayRoutes() {
+    console.log("\n🚀 Available Routes:");
+    console.log("==================");
+    Object.entries(this.routes).forEach(([path, handlers]) => {
+      console.log(`\n📍 ${path}`);
+      Object.keys(handlers).forEach((method) => {
+        const color = method === "default" ? "\x1b[90m" : "\x1b[36m";
+        console.log(`  ${color}${method}\x1b[0m`);
+      });
+    });
+    console.log("\n==================\n");
+  }
+
+  listen = async (port: number) => {
+    if (typeof Bun === "undefined") {
+      throw new Error("Voll is only available in Bun");
     }
 
+    await this.loadRoutes();
 
-    listen = async (port: number) => {
-        if (typeof Bun === "undefined") {
-            throw new Error("Voll is only available in Bun");
+    if (this.showRoutes) {
+      this.displayRoutes();
+    }
+
+    Bun.serve({
+      port,
+      fetch: async (request: Request) => {
+        const url = new URL(request.url);
+        const pathname = url.pathname;
+        const method = request.method as HttpMethod;
+        let body = undefined;
+        if (this.parseJson && request.body) {
+          const contentType = request.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            try {
+              body = await request.json();
+            } catch (e) {
+              return new Response("Invalid JSON", { status: 400 });
+            }
+          }
         }
+        for (const route in this.routes) {
+          const params = matchRoute(pathname, route);
+          if (params) {
+            const routeHandlers = this.routes[route];
+            const handler = routeHandlers[method] || routeHandlers["default"];
+            const handlerConfig = routeHandlers["config"];
+            if (handler) {
+              if (handlerConfig) {
+                  const schema =
+                  //@ts-expect-error Please why :(
+                  handlerConfig[method]?.schema || handlerConfig?.schema;
 
-        await this.loadRoutes();
-
-        if (this.showRoutes) {
-            this.displayRoutes();
-        }
-
-
-        Bun.serve({
-            port,
-            fetch: async (request: Request) => {
-                const url = new URL(request.url);
-                const pathname = url.pathname;
-                const method = request.method as HttpMethod;
-                let body = undefined;
-                if (this.parseJson && request.body) {
-                    const contentType = request.headers.get('content-type');
-                    if (contentType?.includes('application/json')) {
-                        try {
-                            body = await request.json();
-                        } catch (e) {
-                            return new Response('Invalid JSON', { status: 400 });
-                        }
+                if (schema) {
+                  const validator = createConfigValidator(schema);
+                  if (body && validator?.body) {
+                    const result = validator.body?.(body);
+                    if (!result.valid) {
+                      return new VollResponse()
+                        .statusCode(BAD_REQUEST)
+                        .sendJson({
+                          errors: result.errors,
+                          success: false,
+                        });
+                    } else {
+                      body = result.data;
                     }
+                  }
                 }
-                for (const route in this.routes) {
-                    const params = matchRoute(pathname, route);
-                    if (params) {
-                        const routeHandlers = this.routes[route];
-                        const handler = routeHandlers[method] || routeHandlers["default"];
-                        if (handler) {
-                            const vollRequest = {
-                                ...request,
-                                params,
-                                query: Object.fromEntries(url.searchParams),
-                                body: body,
-                            } as VollRequest;
+              }
 
-                            try {
-                                const vollResponse = new VollResponse();
-                                return handler(vollRequest, vollResponse);
-                            } catch (error) {
-                                console.error('[Voll] Internal Server Error:', error);
-                                return new Response("Internal Server Error", { status: 500 });
-                            }
-                        }
+              const vollRequest = {
+                ...request,
+                params,
+                query: Object.fromEntries(url.searchParams),
+                body: body,
+              } as VollRequest;
 
-                        return new Response("Method Not Allowed", { status: 405 });
-                    }
-                }
-
-                return new Response("Not Found", { status: 404 });
+              try {
+                const vollResponse = new VollResponse();
+                return handler(vollRequest, vollResponse);
+              } catch (error) {
+                console.error("[Voll] Internal Server Error:", error);
+                return new Response("Internal Server Error", { status: 500 });
+              }
             }
 
-        });
-    };
+            return new Response("Method Not Allowed", { status: 405 });
+          }
+        }
 
+        return new Response("Not Found", { status: 404 });
+      },
+    });
+  };
 }

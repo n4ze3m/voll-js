@@ -1,4 +1,5 @@
 import type { VollRequest, VollResponse } from "./http";
+import {  VollConfig } from "./config";
 
 export interface VollOptions {
     routesDir?: string
@@ -13,5 +14,7 @@ export type RouteHandler = (req: VollRequest, res: VollResponse) => Response | P
 export type RouteHandlers = {
     [path: string]: {
         [method in HttpMethod]?: RouteHandler;
-    };
+    } & {
+        config?: VollConfig;
+    }
 };
