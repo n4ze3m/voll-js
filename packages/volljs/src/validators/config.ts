@@ -19,7 +19,9 @@ export function createConfigValidator(routeSchema: RouteSchema) {
         verbose: true,
         strict: true,
         coerceTypes: true,
-        removeAdditional: 'all'
+        removeAdditional: 'all',
+        useDefaults: true,
+        allowUnionTypes: true,
     })
 
     avjFormats(ajv)

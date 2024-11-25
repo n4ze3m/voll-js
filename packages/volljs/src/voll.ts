@@ -6,7 +6,6 @@ import type { VollRequest } from "./types/http";
 import { VollResponse } from "./http/response";
 import { matchRoute } from "./utils/match-route";
 import { buildRoutePath } from "./utils/build-route";
-import { RouteSchema } from "./types/config";
 import { createConfigValidator } from "./validators/config";
 import { BAD_REQUEST } from "./types/stats-code";
 
@@ -104,7 +103,6 @@ export class Voll {
                 if (module.default) {
                     this.routes[routePath]["default"] = module.default;
                 }
-
                 if (module.config) {
                     this.routes[routePath]["config"] = module.config;
                 }
@@ -127,7 +125,8 @@ export class Voll {
         console.log("\n==================\n");
     }
 
-    listen = async (port: number) => {
+    listen = async (options: number | Partial<Server>) => {
+
         if (typeof Bun === "undefined") {
             throw new Error("Voll is only available in Bun");
         }
@@ -138,8 +137,16 @@ export class Voll {
             this.displayRoutes();
         }
 
+        let optionsObj: Partial<Server> = {};
+
+        if (typeof options === "number") {
+            optionsObj = { port: Number(options) };
+        } else {
+            optionsObj = options;
+        }
+
         Bun.serve({
-            port,
+            ...optionsObj,
             fetch: async (request: Request) => {
                 const url = new URL(request.url);
                 const pathname = url.pathname;
@@ -162,11 +169,12 @@ export class Voll {
                         const handler = routeHandlers[method] || routeHandlers["default"];
                         const handlerConfig = routeHandlers["config"];
                         if (handler) {
+                            let query = Object.fromEntries(url.searchParams)
                             if (handlerConfig) {
                                 const schema =
                                     //@ts-expect-error Please why :(
                                     handlerConfig[method]?.schema || handlerConfig?.schema;
-
+                                console.log(schema)
                                 if (schema) {
                                     const validator = createConfigValidator(schema);
                                     if (body && validator?.body) {
@@ -196,13 +204,27 @@ export class Voll {
                                             params = result.data as any;
                                         }
                                     }
+
+                                    if (query && validator?.query) {
+                                        const result = validator.query?.(query);
+                                        if (!result.valid) {
+                                            return new VollResponse()
+                                                .statusCode(BAD_REQUEST)
+                                                .sendJson({
+                                                    errors: result.errors,
+                                                    success: false,
+                                                });
+                                        } else {
+                                            query = result.data as any;
+                                        }
+                                    }
                                 }
                             }
 
                             const vollRequest = {
                                 ...request,
                                 params,
-                                query: Object.fromEntries(url.searchParams),
+                                query: query,
                                 body: body,
                             } as VollRequest;
 
