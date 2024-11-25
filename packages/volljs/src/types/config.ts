@@ -6,6 +6,9 @@ export type SimpleSchema = JSONSchemaType<any> | Record<string, any>;
 
 export interface RouteSchema {
     body?: JSONSchemaType<any> | Record<string, any>;
+    params?: JSONSchemaType<any> | Record<string, any>;
+    query?: JSONSchemaType<any> | Record<string, any>;
+    headers?: JSONSchemaType<any> | Record<string, any>;
 }
 
 export type MiddlewareFunction = (

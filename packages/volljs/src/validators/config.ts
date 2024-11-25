@@ -1,5 +1,6 @@
 import Ajv, { ErrorObject } from 'ajv'
 import type { RouteSchema } from '../types/config'
+import avjFormats from "ajv-formats"
 
 interface ValidationError {
     field: string
@@ -18,8 +19,10 @@ export function createConfigValidator(routeSchema: RouteSchema) {
         verbose: true,
         strict: true,
         coerceTypes: true,
-        removeAdditional: 'all' 
+        removeAdditional: 'all'
     })
+
+    avjFormats(ajv)
 
     const formatError = (error: ErrorObject): ValidationError => ({
         field: error.instancePath || 'root',
@@ -33,10 +36,10 @@ export function createConfigValidator(routeSchema: RouteSchema) {
                 const clonedData = JSON.parse(JSON.stringify(data))
                 const valid = validate(clonedData)
                 const errors = validate.errors?.map(formatError) || []
-                return { 
-                    valid, 
+                return {
+                    valid,
                     errors,
-                    data: valid ? (clonedData as T) : null 
+                    data: valid ? (clonedData as T) : null
                 }
             }
         } catch (error) {
@@ -46,8 +49,9 @@ export function createConfigValidator(routeSchema: RouteSchema) {
 
     const validators = {
         body: routeSchema.body ? compileSchema(routeSchema.body, 'request body') : null,
-        // query: routeSchema.query ? compileSchema(routeSchema.query, 'query parameters') : null,
-        // params: routeSchema.params ? compileSchema(routeSchema.params, 'route parameters') : null
+        query: routeSchema.query ? compileSchema(routeSchema.query, 'query parameters') : null,
+        params: routeSchema.params ? compileSchema(routeSchema.params, 'route parameters') : null,
+        headers: routeSchema.headers ? compileSchema(routeSchema.headers, 'headers') : null,
     }
 
     return validators
