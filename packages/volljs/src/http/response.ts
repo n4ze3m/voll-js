@@ -61,39 +61,52 @@ export class VollResponse implements IVollResponse {
     }
 
     sendJson(data: any): Response {
-        return new Response(JSON.stringify(data), {
+        this.response = new Response(JSON.stringify(data), {
             headers: this.addPoweredByHeader({ "Content-Type": "application/json" }),
             status: this.response.status,
         });
+        return this.response;
     }
 
+
     json(data: any): Response {
-        return new Response(JSON.stringify(data), {
+        this.response = new Response(JSON.stringify(data), {
             headers: this.addPoweredByHeader({ "Content-Type": "application/json" }),
             status: this.response.status,
         });
+        return this.response;
     }
 
     send(data: string): Response {
-        return new Response(data, {
+        this.response =  new Response(data, {
             headers: this.addPoweredByHeader({ "Content-Type": "text/plain" }),
             status: this.response.status,
         });
+        return this.response
     }
 
     sendSoap(data: string): Response {
-        return new Response(data, {
+        this.response =  new Response(data, {
             headers: this.addPoweredByHeader({
                 "Content-Type": "application/soap+xml",
             }),
             status: this.response.status,
         });
+
+        return this.response
     }
 
     sendStatus(code: number): Response {
-        return new Response(null, {
+        this.response =  new Response(null, {
             headers: this.addPoweredByHeader({}),
             status: code,
         });
+
+        return this.response
+    }
+
+    getResponse(): Response {
+        console.log(this.response)
+        return this.response
     }
 }

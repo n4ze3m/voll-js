@@ -1,4 +1,4 @@
-import type { Serve, Server } from "bun";
+import type { Server } from "bun";
 import { join } from "path";
 import { readdir } from "node:fs/promises";
 import type { VollOptions, HttpMethod, RouteHandlers } from "./types";
@@ -8,6 +8,7 @@ import { matchRoute } from "./utils/match-route";
 import { buildRoutePath } from "./utils/build-route";
 import { createConfigValidator } from "./validators/config";
 import { BAD_REQUEST } from "./types/stats-code";
+import { MiddlewareFunction } from "./types/config";
 
 export class Voll {
     private routesDir: string = "routes";
@@ -226,10 +227,32 @@ export class Voll {
                                 query: query,
                                 body: body,
                             } as VollRequest;
+                            const vollResponse = new VollResponse();
+                            const executeMiddleware = async () => {
+                                if (handlerConfig) {
+                                    const middlewareList: MiddlewareFunction[] =
+                                        //@ts-expect-error handlerConfig typing
+                                        handlerConfig[method]?.middleware || handlerConfig.middleware || [];
 
-                            try {
-                                const vollResponse = new VollResponse();
+                                    for (const middleware of middlewareList) {
+                                        let nextCalled = false;
+                                        await middleware(vollRequest, vollResponse, async () => {
+                                            nextCalled = true;
+                                        });
+                                        if (!nextCalled) {
+                                            const response =  vollResponse.getResponse();
+                                            if (response) {
+                                                return response
+                                            }
+                                            console.warn("[Voll] Middleware stopped execution. No `next()` was called.");
+                                            return new Response();
+                                        }
+                                    }
+                                }
                                 return handler(vollRequest, vollResponse);
+                            };
+                            try {
+                                return await executeMiddleware();
                             } catch (error) {
                                 console.error("[Voll] Internal Server Error:", error);
                                 return new Response("Internal Server Error", { status: 500 });
