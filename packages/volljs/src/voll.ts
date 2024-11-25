@@ -17,6 +17,7 @@ export class Voll {
     private showRoutes: boolean = false;
     private parseJson: boolean = true;
     private server: Server | undefined;
+    private isRoutesLoaded: boolean = false;
 
     constructor(options?: VollOptions) {
         this.routesDir = options?.routesDir || this.routesDir;
@@ -51,6 +52,7 @@ export class Voll {
 
     private async loadRoutes(currentPath: string = "") {
         try {
+            this.isRoutesLoaded = false
             const files = await readdir(join(this.routesDir, currentPath), {
                 withFileTypes: true,
             });
@@ -111,6 +113,8 @@ export class Voll {
             }
         } catch (error) {
             console.error("Error loading routes:", error);
+        } finally {
+            this.isRoutesLoaded = true
         }
     }
 
@@ -127,8 +131,136 @@ export class Voll {
         console.log("\n==================\n");
     }
 
-    listen = async (options: number | Partial<Server>, callback?: (server: Server) => void) => {
+    handle = async (request: Request, server?: Server) => {
 
+        if (!this.isRoutesLoaded) {
+            await this.loadRoutes();
+        }
+
+        const url = new URL(request.url);
+        const pathname = url.pathname;
+        const method = request.method as HttpMethod;
+        let body = undefined;
+
+        if (this.parseJson && request.body) {
+            const contentType = request.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+                try {
+                    body = await request.json();
+                } catch (e) {
+                    return new Response("Invalid JSON", { status: 400 });
+                }
+            }
+        }
+
+        const ip = server ? server.requestIP(request) : null;
+
+        for (const route in this.routes) {
+            let params = matchRoute(pathname, route);
+            if (params) {
+                const routeHandlers = this.routes[route];
+                const handler = routeHandlers[method] || routeHandlers["default"];
+                const handlerConfig = routeHandlers["config"];
+                if (handler) {
+                    let query = Object.fromEntries(url.searchParams)
+                    if (handlerConfig) {
+                        const schema =
+                            //@ts-expect-error Please why :(
+                            handlerConfig[method]?.schema || handlerConfig?.schema;
+                        if (schema) {
+                            const validator = createConfigValidator(schema);
+                            if (body && validator?.body) {
+                                const result = validator.body?.(body);
+                                if (!result.valid) {
+                                    return new VollResponse()
+                                        .statusCode(BAD_REQUEST)
+                                        .sendJson({
+                                            errors: result.errors,
+                                            success: false,
+                                        });
+                                } else {
+                                    body = result.data;
+                                }
+                            }
+
+                            if (params && validator?.params) {
+                                const result = validator.params?.(params);
+                                if (!result.valid) {
+                                    return new VollResponse()
+                                        .statusCode(BAD_REQUEST)
+                                        .sendJson({
+                                            errors: result.errors,
+                                            success: false,
+                                        });
+                                } else {
+                                    params = result.data as any;
+                                }
+                            }
+
+                            if (query && validator?.query) {
+                                const result = validator.query?.(query);
+                                if (!result.valid) {
+                                    return new VollResponse()
+                                        .statusCode(BAD_REQUEST)
+                                        .sendJson({
+                                            errors: result.errors,
+                                            success: false,
+                                        });
+                                } else {
+                                    query = result.data as any;
+                                }
+                            }
+                        }
+                    }
+                    // get headers 
+                    const vollRequest = {
+                        ...request,
+                        params,
+                        query: query,
+                        body: body,
+                        ip: ip,
+                        headers: request.headers as unknown as Record<string, string>,
+                    } as VollRequest;
+                    const vollResponse = new VollResponse();
+                    // middleware code
+                    const executeMiddleware = async () => {
+                        if (handlerConfig) {
+                            const middlewareList: MiddlewareFunction[] =
+                                //@ts-expect-error handlerConfig typing
+                                handlerConfig[method]?.middleware || handlerConfig.middleware || [];
+                            for (let i = 0; i < middlewareList.length; i++) {
+                                const middleware = middlewareList[i];
+                                let nextCalled = false;
+                                await middleware(vollRequest, vollResponse, async () => {
+                                    nextCalled = true;
+                                });
+                                if (!nextCalled) {
+                                    const response = vollResponse.getResponse();
+                                    if (response) {
+                                        return response
+                                    }
+                                    console.warn("[Voll] Middleware stopped execution. No `next()` was called.");
+                                    return new Response();
+                                }
+                            }
+                        }
+                        return handler(vollRequest, vollResponse);
+                    };
+                    try {
+                        return await executeMiddleware();
+                    } catch (error) {
+                        console.error("[Voll] Internal Server Error:", error);
+                        return new Response("Internal Server Error", { status: 500 });
+                    }
+                }
+                return new Response("Method Not Allowed", { status: 405 });
+            }
+        }
+        return new Response("Not Found", { status: 404 });
+    }
+
+
+    listen = async (options: number | Partial<Server>, callback?: (server: Server) => void) => {
         if (typeof Bun === "undefined") {
             throw new Error("Voll is only available in Bun");
         }
@@ -140,7 +272,6 @@ export class Voll {
         }
 
         let optionsObj: Partial<Server> = {};
-
         if (typeof options === "number") {
             optionsObj = { port: Number(options) };
         } else {
@@ -149,127 +280,7 @@ export class Voll {
 
         this.server = Bun.serve({
             ...optionsObj,
-            fetch: async (request: Request, server: Server) => {
-                const url = new URL(request.url);
-                const pathname = url.pathname;
-                const method = request.method as HttpMethod;
-                let body = undefined;
-                if (this.parseJson && request.body) {
-                    const contentType = request.headers.get("content-type");
-                    if (contentType?.includes("application/json")) {
-                        try {
-                            body = await request.json();
-                        } catch (e) {
-                            return new Response("Invalid JSON", { status: 400 });
-                        }
-                    }
-                }
-                const ip = server.requestIP(request);
-                for (const route in this.routes) {
-                    let params = matchRoute(pathname, route);
-                    if (params) {
-                        const routeHandlers = this.routes[route];
-                        const handler = routeHandlers[method] || routeHandlers["default"];
-                        const handlerConfig = routeHandlers["config"];
-                        if (handler) {
-                            let query = Object.fromEntries(url.searchParams)
-                            if (handlerConfig) {
-                                const schema =
-                                    //@ts-expect-error Please why :(
-                                    handlerConfig[method]?.schema || handlerConfig?.schema;
-                                if (schema) {
-                                    const validator = createConfigValidator(schema);
-                                    if (body && validator?.body) {
-                                        const result = validator.body?.(body);
-                                        if (!result.valid) {
-                                            return new VollResponse()
-                                                .statusCode(BAD_REQUEST)
-                                                .sendJson({
-                                                    errors: result.errors,
-                                                    success: false,
-                                                });
-                                        } else {
-                                            body = result.data;
-                                        }
-                                    }
-
-                                    if (params && validator?.params) {
-                                        const result = validator.params?.(params);
-                                        if (!result.valid) {
-                                            return new VollResponse()
-                                                .statusCode(BAD_REQUEST)
-                                                .sendJson({
-                                                    errors: result.errors,
-                                                    success: false,
-                                                });
-                                        } else {
-                                            params = result.data as any;
-                                        }
-                                    }
-
-                                    if (query && validator?.query) {
-                                        const result = validator.query?.(query);
-                                        if (!result.valid) {
-                                            return new VollResponse()
-                                                .statusCode(BAD_REQUEST)
-                                                .sendJson({
-                                                    errors: result.errors,
-                                                    success: false,
-                                                });
-                                        } else {
-                                            query = result.data as any;
-                                        }
-                                    }
-                                }
-                            }
-                            // get headers 
-                            const vollRequest = {
-                                ...request,
-                                params,
-                                query: query,
-                                body: body,
-                                ip: ip,
-                                headers: request.headers as unknown as Record<string, string>,
-                            } as VollRequest;
-                            const vollResponse = new VollResponse();
-                            // middleware code
-                            const executeMiddleware = async () => {
-                                if (handlerConfig) {
-                                    const middlewareList: MiddlewareFunction[] =
-                                        //@ts-expect-error handlerConfig typing
-                                        handlerConfig[method]?.middleware || handlerConfig.middleware || [];
-                                    for (let i = 0; i < middlewareList.length; i++) {
-                                        const middleware = middlewareList[i];
-                                        let nextCalled = false;
-                                        await middleware(vollRequest, vollResponse, async () => {
-                                            nextCalled = true;
-                                        });
-                                        if (!nextCalled) {
-                                            const response = vollResponse.getResponse();
-                                            if (response) {
-                                                return response
-                                            }
-                                            console.warn("[Voll] Middleware stopped execution. No `next()` was called.");
-                                            return new Response();
-                                        }
-                                    }
-                                }
-                                return handler(vollRequest, vollResponse);
-                            };
-                            try {
-                                return await executeMiddleware();
-                            } catch (error) {
-                                console.error("[Voll] Internal Server Error:", error);
-                                return new Response("Internal Server Error", { status: 500 });
-                            }
-                        }
-
-                        return new Response("Method Not Allowed", { status: 405 });
-                    }
-                }
-
-                return new Response("Not Found", { status: 404 });
-            },
+            fetch: (request: Request, server: Server) => this.handle(request, server)
         });
 
         if (callback) {
@@ -277,8 +288,7 @@ export class Voll {
         } else {
             console.log(`[🚀 Voll Listening on ${this.server.hostname}:${this.server.port}] ✨`);
         }
-    };
-
+    }
 
     stop() {
         try {
