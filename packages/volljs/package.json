@@ -1,13 +1,27 @@
 {
-  "name": "core",
+  "name": "volljs",
   "main": "./dist/cjs/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",
   "type": "module",
-  "version": "0.0.1",
+  "description": "Voll is a tiny file based http framework for creating apis",
+  "version": "0.0.1-rc.1",
+  "author": {
+    "name": "n4ze3m",
+    "email": "me@n4ze3m.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/n4ze3m/voll-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/n4ze3m/voll-js/issues"
+  },
+  "homepage": "https://github.com/n4ze3m/voll-js#readme",
   "scripts": {
-    "build": "bun build.ts"
+    "build": "bun build.ts",
+    "publish": "bun test &&  bun run build && npm publish --access public"
   },
   "devDependencies": {
     "@types/bun": "latest",
