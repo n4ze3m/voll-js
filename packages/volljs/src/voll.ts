@@ -174,7 +174,6 @@ export class Voll {
                                 const schema =
                                     //@ts-expect-error Please why :(
                                     handlerConfig[method]?.schema || handlerConfig?.schema;
-                                console.log(schema)
                                 if (schema) {
                                     const validator = createConfigValidator(schema);
                                     if (body && validator?.body) {
