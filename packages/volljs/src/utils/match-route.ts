@@ -27,6 +27,9 @@ export function matchRoute(
 
         const catchAllParam = lastRouteSegment.slice(0, -1);
         const remainingSegments = pathnameSegments.slice(baseSegments.length);
+        if (remainingSegments.length === 0) {
+            return null;
+        }
         params[catchAllParam] = remainingSegments
 
         return params;
