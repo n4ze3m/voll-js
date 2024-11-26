@@ -117,15 +117,25 @@ export class Voll {
             this.isRoutesLoaded = true
         }
     }
-
     private displayRoutes() {
         console.log("\n🚀 Available Routes:");
         console.log("==================");
         Object.entries(this.routes).forEach(([path, handlers]) => {
-            console.log(`\n📍 ${path}`);
             Object.keys(handlers).forEach((method) => {
-                const color = method === "default" ? "\x1b[90m" : "\x1b[36m";
-                console.log(`  ${color}${method}\x1b[0m`);
+                if (method === 'config') return;
+                const colors: { [key: string]: string } = {
+                    'GET': '\x1b[32m',
+                    'POST': '\x1b[33m',
+                    'PUT': '\x1b[34m',
+                    'DELETE': '\x1b[31m',
+                    'PATCH': '\x1b[35m',
+                    'OPTIONS': '\x1b[36m',
+                    'HEAD': '\x1b[37m',
+                    'default': '\x1b[32m'
+                };
+                const color = colors[method] || '\x1b[32m';
+                const displayMethod = method === 'default' ? 'GET' : method;
+                console.log(`  ${color}[${displayMethod}] ${path}\x1b[0m`);
             });
         });
         console.log("\n==================\n");
@@ -159,7 +169,7 @@ export class Voll {
             let params = matchRoute(pathname, route);
             if (params) {
                 const routeHandlers = this.routes[route];
-                const handler = routeHandlers[method] || routeHandlers["default"];
+                const handler = routeHandlers[method] || (method === "GET" ? routeHandlers["default"] : undefined);
                 const handlerConfig = routeHandlers["config"];
                 if (handler) {
                     let query = Object.fromEntries(url.searchParams)
