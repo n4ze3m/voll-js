@@ -14,8 +14,8 @@ export interface VollRequest extends Omit<Request, 'headers'> {
     body: any;
     /** Remote IP address of the client */
     ip?: SocketAddress | null;
-
     headers: Record<string, string>;
+    cookies: Record<string, string | number | object>;
 }
 
 /**

@@ -11,6 +11,7 @@ import { BAD_REQUEST } from "./types/stats-code";
 import { MiddlewareFunction } from "./types/config";
 import fastQueryString from "fast-querystring"
 import qs from "qs";
+import { CookieManager } from "./http/cookie-manager";
 
 export class Voll {
     private routesDir: string = "routes";
@@ -22,12 +23,16 @@ export class Voll {
     private isRoutesLoaded: boolean = false;
     private queryParser: QueryParser = "fast-querystring";
     private cookieSecret: string = "voll-secret-key";
+    private cookieManager: CookieManager = new CookieManager()
     constructor(options?: VollOptions) {
         this.routesDir = options?.routesDir || this.routesDir;
         this.showRoutes = options?.showRoutes || false;
         this.parseJson = options?.parseJson || this.parseJson;
         this.queryParser = options?.queryParser ?? this.queryParser;
         this.cookieSecret = options?.cookieSecret || this.cookieSecret;
+        if (this.cookieManager) {
+            this.cookieManager.setCookieSecret(options?.cookieSecret || this.cookieSecret)
+        }
     }
 
     private parseQuery(searchParams: string, queryParser?: QueryParser): Record<string, any> {
@@ -186,6 +191,9 @@ export class Voll {
         }
 
         const ip = server ? server.requestIP(request) : null;
+        const cookies = this.cookieManager.parseCookies(
+            request.headers.get('cookie') || ''
+        );
 
         for (const route in this.routes) {
             let params = matchRoute(pathname, route);
@@ -255,6 +263,7 @@ export class Voll {
                         body: body,
                         ip: ip,
                         headers: request.headers as unknown as Record<string, string>,
+                        cookies: cookies,
                     } as VollRequest;
 
                     const vollResponse = new VollResponse();
