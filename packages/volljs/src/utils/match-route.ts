@@ -30,7 +30,7 @@ export function matchRoute(
         if (remainingSegments.length === 0) {
             return null;
         }
-        params[catchAllParam] = remainingSegments
+        params[catchAllParam] = remainingSegments;
 
         return params;
     }
@@ -45,8 +45,21 @@ export function matchRoute(
         const routeSegment = routeSegments[i];
         const pathnameSegment = pathnameSegments[i];
 
-        if (routeSegment.startsWith(":")) {
-            params[routeSegment.slice(1)] = pathnameSegment;
+        if (routeSegment.includes(":")) {
+            const paramParts = routeSegment.split(/[-.]/);
+            const valueParts = pathnameSegment.split(/[-.]/);
+            
+            if (paramParts.length !== valueParts.length) {
+                return null;
+            }
+
+            for (let j = 0; j < paramParts.length; j++) {
+                if (paramParts[j].startsWith(":")) {
+                    params[paramParts[j].slice(1)] = valueParts[j];
+                } else if (paramParts[j] !== valueParts[j]) {
+                    return null;
+                }
+            }
         } else if (routeSegment !== pathnameSegment) {
             return null;
         }
