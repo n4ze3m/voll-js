@@ -72,7 +72,7 @@ describe('VollResponse', () => {
     it('handles array buffer response', async () => {
         const response = new VollResponse()
         const data = new Uint8Array([1, 2, 3])
-        response.send(String.fromCharCode.apply(null, data))
+        response.send(String.fromCharCode.apply(null, Array.from(data)))
         const buffer = await response.arrayBuffer()
         expect(buffer).toBeDefined()
     })

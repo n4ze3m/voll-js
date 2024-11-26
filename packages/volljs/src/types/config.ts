@@ -3,7 +3,7 @@
  */
 
 import { JSONSchemaType } from "ajv";
-import { HttpMethod } from ".";
+import { HttpMethod, QueryParser } from ".";
 import { VollNextFunction, VollRequest, VollResponse } from "./http";
 
 /**
@@ -19,10 +19,10 @@ export interface RouteSchema {
     body?: JSONSchemaType<any> | Record<string, any>;
     /** Validates URL parameters against this schema */
     params?: JSONSchemaType<any> | Record<string, any>;
-    /** Validates query parameters against this schema */
+    /** Validates query string against this schema */
     query?: JSONSchemaType<any> | Record<string, any>;
-    /** Validates request headers against this schema */
-    headers?: JSONSchemaType<any> | Record<string, any>;
+    /** Optional query parser to use for parsing query strings */
+    queryParser?: QueryParser
 }
 
 /**

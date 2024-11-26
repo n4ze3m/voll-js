@@ -1,7 +1,7 @@
 import type { Server } from "bun";
 import { join } from "path";
 import { readdir } from "node:fs/promises";
-import type { VollOptions, HttpMethod, RouteHandlers } from "./types";
+import type { VollOptions, HttpMethod, RouteHandlers, QueryParser } from "./types";
 import type { VollRequest } from "./types/http";
 import { VollResponse } from "./http/response";
 import { matchRoute } from "./utils/match-route";
@@ -9,6 +9,8 @@ import { buildRoutePath } from "./utils/build-route";
 import { createConfigValidator } from "./validators/config";
 import { BAD_REQUEST } from "./types/stats-code";
 import { MiddlewareFunction } from "./types/config";
+import fastQueryString from "fast-querystring"
+import qs from "qs";
 
 export class Voll {
     private routesDir: string = "routes";
@@ -18,13 +20,31 @@ export class Voll {
     private parseJson: boolean = true;
     private server: Server | undefined;
     private isRoutesLoaded: boolean = false;
-
+    private queryParser: QueryParser = "fast-querystring";
     constructor(options?: VollOptions) {
         this.routesDir = options?.routesDir || this.routesDir;
         this.showRoutes = options?.showRoutes || false;
         this.parseJson = options?.parseJson || this.parseJson;
+        this.queryParser = options?.queryParser ?? this.queryParser;
     }
 
+    private parseQuery(searchParams: string, queryParser?: QueryParser): Record<string, any> {
+        if (!queryParser) return {};
+
+        if (typeof queryParser === 'function') {
+            return queryParser(searchParams);
+        }
+
+        if (queryParser === 'fast-querystring') {
+            return fastQueryString.parse(searchParams);
+        }
+
+        if (queryParser === 'qs') {
+            return qs.parse(searchParams);
+        }
+
+        return {};
+    }
     private extractParams(route: string): string[] {
         const params: string[] = [];
         const matches = route.match(/\[(\w+)\]/g);
@@ -172,13 +192,16 @@ export class Voll {
                 const handler = routeHandlers[method] || (method === "GET" ? routeHandlers["default"] : undefined);
                 const handlerConfig = routeHandlers["config"];
                 if (handler) {
-                    let query = Object.fromEntries(url.searchParams)
+                    let query = this.parseQuery(url.searchParams.toString(), this.queryParser);
                     if (handlerConfig) {
                         const schema =
                             //@ts-expect-error Please why :(
                             handlerConfig[method]?.schema || handlerConfig?.schema;
                         if (schema) {
                             const validator = createConfigValidator(schema);
+                            if (schema?.queryParser) {
+                                query = this.parseQuery(url.searchParams.toString(), schema.queryParser);
+                            }
                             if (body && validator?.body) {
                                 const result = validator.body?.(body);
                                 if (!result.valid) {
@@ -268,8 +291,6 @@ export class Voll {
         }
         return new Response("Not Found", { status: 404 });
     }
-
-
     listen = async (options: number | Partial<Server>, callback?: (server: Server) => void) => {
         if (typeof Bun === "undefined") {
             throw new Error("Voll is only available in Bun");
