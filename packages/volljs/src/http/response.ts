@@ -80,7 +80,7 @@ export class VollResponse implements IVollResponse {
         if (cookieOptions.maxAge) {
             cookieOptions.maxAge = millisecondsToSeconds(cookieOptions.maxAge);
             if (cookieOptions.maxAge === 1) {
-                cookieOptions.expires = new Date(Date.now() + 1000);
+                cookieOptions.expires = new Date(0);
             }
         }
         this.cookies.set(name, { value: stringValue, options: cookieOptions });
@@ -102,7 +102,7 @@ export class VollResponse implements IVollResponse {
         return this;
     }
     clearCookie(name: string, options?: VollSerializeOptions): this {
-        return this.cookie(name, "", { ...options, expires: new Date(0) });
+        return this.cookie(name, "", { ...options, maxAge: undefined,  expires: new Date(0) });
     }
 
     disablePoweredBy(): this {
