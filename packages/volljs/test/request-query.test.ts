@@ -126,5 +126,23 @@ describe("Request Query Testing", () => {
             queryLength: 0
         });
     });
+
+    it('should return query string length from /custom-query route', async () => {
+        const response = await app.handle(
+            new Request("http://localhost/custom-query?user=john&role=admin&active=true")
+        );
+        expect(response.status).toBe(200);
+        const res = await response.json();
+        expect(res).toEqual({ length: 32 });
+    });
+
+    it('should handle empty query in /custom-query route', async () => {
+        const response = await app.handle(
+            new Request("http://localhost/custom-query")
+        );
+        expect(response.status).toBe(200);
+        const res = await response.json();
+        expect(res).toEqual({ length: 0 });
+    });
 });
 
