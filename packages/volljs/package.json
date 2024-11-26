@@ -6,7 +6,7 @@
   "exports": "./dist/index.js",
   "type": "module",
   "description": "Voll is a tiny file based http framework for creating apis",
-  "version": "0.0.1-rc.4",
+  "version": "0.0.1-rc.5",
   "author": {
     "name": "n4ze3m",
     "email": "me@n4ze3m.com"
