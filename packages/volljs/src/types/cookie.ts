@@ -5,7 +5,11 @@ export interface CookieOptions extends SerializeOptions {
     value: string;
 }
 
+
+export type VollSerializeOptions = SerializeOptions & { signed?: boolean }
+
+
 export interface VollCookie {
-    cookie(name: string, value: string | number | object, options?: SerializeOptions): void;
-    clearCookie(name: string, options?: SerializeOptions): void;
+    cookie(name: string, value: string | number | object, options?: VollSerializeOptions): void;
+    clearCookie(name: string, options?: VollSerializeOptions): void;
 }

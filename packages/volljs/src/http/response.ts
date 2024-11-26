@@ -7,11 +7,14 @@ import {
     SerializeOptions,
 } from "cookie";
 import { millisecondsToSeconds } from "@/utils/ms-to-sec";
+import { sign, unsign } from 'cookie-signature';
+import { VollSerializeOptions } from "@/types/cookie";
 
 export class VollResponse implements IVollResponse {
     private response: Response;
     private poweredBy: boolean = true;
     private customHeaders: Record<string, string> = {};
+    private cookieSecret: string = "voll-secret-key";
     private cookies: Map<string, { value: string; options?: SerializeOptions }> =
         new Map();
     body: any;
@@ -47,13 +50,27 @@ export class VollResponse implements IVollResponse {
         return this.response.text();
     }
 
+    signedCookie(name: string, value: string | number | object, options?: SerializeOptions): this {
+        const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+        const jsonValue = typeof value !== 'string' ? `j:${stringValue}` : stringValue;
+        const signedValue = 's:' + sign(jsonValue, this.cookieSecret);
+        return this.cookie(name, signedValue, options);
+    }
+
     cookie(
         name: string,
         value: string | number | object,
-        options?: SerializeOptions
+        options?: VollSerializeOptions
     ): this {
-        const stringValue =
+        let stringValue =
             typeof value === "string" ? value : JSON.stringify(value);
+
+        if (options?.signed) {
+            const jsonValue = typeof value !== 'string' ? `j:${stringValue}` : stringValue;
+            stringValue = 's:' + sign(jsonValue, this.cookieSecret);
+            options.signed = undefined;
+        }
+
         const cookieOptions = { path: "/", ...options };
         /**
          * Convert maxAge from milliseconds to seconds and handle special case for 1 second
@@ -79,7 +96,12 @@ export class VollResponse implements IVollResponse {
         this.customHeaders["Set-Cookie"] = cookieHeaders.join(",");
         return this;
     }
-    clearCookie(name: string, options?: SerializeOptions): this {
+
+    setCookieSecret(secret: string): this {
+        this.cookieSecret = secret;
+        return this;
+    }
+    clearCookie(name: string, options?: VollSerializeOptions): this {
         return this.cookie(name, "", { ...options, expires: new Date(0) });
     }
 

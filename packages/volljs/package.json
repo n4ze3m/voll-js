@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/cookie-signature": "^1.1.2",
     "@types/qs": "^6.9.17",
     "bumpp": "^9.8.1",
     "rimraf": "^6.0.1",
@@ -38,6 +39,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cookie": "^1.0.2",
+    "cookie-signature": "^1.2.2",
     "fast-querystring": "^1.1.2",
     "qs": "^6.13.1"
   },

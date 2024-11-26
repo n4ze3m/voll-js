@@ -11,6 +11,7 @@ export interface VollOptions {
     showRoutes?: boolean
     parseJson?: boolean
     queryParser?: QueryParser;
+    cookieSecret?: string;
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'default'

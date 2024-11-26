@@ -8,6 +8,8 @@ export const GET = async (req: VollRequest, res: VollResponse) => {
     const maxAge = req?.query?.maxAge;
     const maxAgeNull = req?.query?.maxAgeNull;
     const priority = req?.query?.priority;
+    const jSigned = req?.query?.jSigned;
+    const sSigned = req?.query?.sSigned;
     try {
         if (options) {
             res.cookie("name", "Peter Griffin", {
@@ -44,14 +46,31 @@ export const GET = async (req: VollRequest, res: VollResponse) => {
             return res.send("")
         }
 
+
+        if (jSigned) {
+            res.cookie("user", { name: 'Peter Griffin' }, {
+                signed: true
+            });
+            return res.send("");
+
+        }
+
+        if (sSigned) {
+            res.cookie("name", 'Peter Griffin', {
+                signed: true
+            });
+            return res.send("");
+        }
+
         res.cookie("name", "Peter Griffin");
         if (multiple) {
             res.cookie("age", 47);
             res.cookie("job", "Brewery shipping clerk");
         }
 
+
         return res.send("");
-    } catch (e) {
+    } catch (e: any) {
         return res.statusCode(500).send(e?.message)
     }
 };
@@ -91,6 +110,14 @@ export const config: VollConfig = {
                 },
                 priority: {
                     type: "string"
+                },
+                jSigned: {
+                    type: "boolean",
+                    default: false
+                },
+                sSigned: {
+                    type: "boolean",
+                    default: false
                 }
             },
         },

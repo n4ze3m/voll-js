@@ -21,11 +21,13 @@ export class Voll {
     private server: Server | undefined;
     private isRoutesLoaded: boolean = false;
     private queryParser: QueryParser = "fast-querystring";
+    private cookieSecret: string = "voll-secret-key";
     constructor(options?: VollOptions) {
         this.routesDir = options?.routesDir || this.routesDir;
         this.showRoutes = options?.showRoutes || false;
         this.parseJson = options?.parseJson || this.parseJson;
         this.queryParser = options?.queryParser ?? this.queryParser;
+        this.cookieSecret = options?.cookieSecret || this.cookieSecret;
     }
 
     private parseQuery(searchParams: string, queryParser?: QueryParser): Record<string, any> {
@@ -254,8 +256,9 @@ export class Voll {
                         ip: ip,
                         headers: request.headers as unknown as Record<string, string>,
                     } as VollRequest;
+
                     const vollResponse = new VollResponse();
-                    // middleware code
+                    vollResponse.setCookieSecret(this.cookieSecret);
                     const executeMiddleware = async () => {
                         if (handlerConfig) {
                             const middlewareList: MiddlewareFunction[] =

@@ -6,6 +6,7 @@ describe("Response Cookie Test", () => {
     beforeEach(async () => {
         app = new Voll({
             routesDir: "./test/routes",
+            cookieSecret: 'foo bar baz'
         });
     });
 
@@ -117,5 +118,23 @@ describe("Response Cookie Test", () => {
         );
         expect(response.status).toBe(500);
         expect(await response.text()).toMatch(/option priority is invalid/)
+    })
+
+    it('should generate a signed JSON cookie', async () => {
+        const response = await app.handle(
+            new Request("http://localhost/cookie/string?jSigned=true")
+        );
+        expect(response.status).toBe(200);
+        const cookie = response.headers.get('set-cookie')
+        expect(cookie).toBe('user=s%3Aj%3A%7B%22name%22%3A%22Peter%20Griffin%22%7D.XdjwahglLERZjWTsExhpchNg3xA8fFlc6CskkbRpltY; Path=/')
+    })
+
+    it('should set a signed cookie', async () => {
+        const response = await app.handle(
+            new Request("http://localhost/cookie/string?sSigned=true")
+        );
+        expect(response.status).toBe(200);
+        const cookie = response.headers.get('set-cookie')
+        expect(cookie).toBe('name=s%3APeter%20Griffin.vX9dPUrnK%2Fy9xomXHWuB%2FkpEc3Z1WRvXDY5YAiSmiO4; Path=/')
     })
 })
