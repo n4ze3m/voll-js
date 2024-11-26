@@ -21,6 +21,8 @@ export interface RouteSchema {
     params?: JSONSchemaType<any> | Record<string, any>;
     /** Validates query string against this schema */
     query?: JSONSchemaType<any> | Record<string, any>;
+    /** Headers */
+    headers?: JSONSchemaType<any> | Record<string, any>;
     /** Optional query parser to use for parsing query strings */
     queryParser?: QueryParser
 }
