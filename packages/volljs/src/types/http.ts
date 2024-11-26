@@ -1,5 +1,6 @@
 import { SocketAddress } from "bun";
 import { StatusCode } from "./stats-code";
+import { VollCookie } from "./cookie";
 
 /**
  * Extended Request interface with Voll.js specific properties
@@ -20,7 +21,7 @@ export interface VollRequest extends Omit<Request, 'headers'> {
 /**
  * Extended Response interface with Voll.js helper methods
  */
-export interface VollResponse extends Omit<Response, 'json'> {
+export interface VollResponse extends Omit<Response, 'json'>, VollCookie {
     /**
      * Sets the HTTP status code for the response
      * @param code - HTTP status code

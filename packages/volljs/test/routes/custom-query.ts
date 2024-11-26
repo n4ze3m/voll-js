@@ -1,4 +1,4 @@
-import { VollRequest, VollResponse, VollConfig } from "../../src"
+import type { VollRequest, VollResponse, VollConfig } from "../../src"
 
 export const GET = async (req: VollRequest, res: VollResponse) => {
     const query = req.query

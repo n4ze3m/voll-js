@@ -1,0 +1,1 @@
+export const millisecondsToSeconds = (ms: number) => ms / 1000;

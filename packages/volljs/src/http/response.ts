@@ -1,11 +1,19 @@
 import { Blob } from "buffer";
 import { VollResponse as IVollResponse } from "../types/http";
 import { StatusCode } from "@/types/stats-code";
+import {
+    parse as parseCookies,
+    serialize as serializeCookie,
+    SerializeOptions,
+} from "cookie";
+import { millisecondsToSeconds } from "@/utils/ms-to-sec";
 
 export class VollResponse implements IVollResponse {
     private response: Response;
     private poweredBy: boolean = true;
     private customHeaders: Record<string, string> = {};
+    private cookies: Map<string, { value: string; options?: SerializeOptions }> =
+        new Map();
     body: any;
     headers: any;
     ok: boolean = true;
@@ -18,6 +26,10 @@ export class VollResponse implements IVollResponse {
     trailer: Promise<Headers> = Promise.resolve(
         new Headers() as unknown as Headers
     );
+
+    constructor() {
+        this.response = new Response();
+    }
     clone(): Response {
         return this.response.clone();
     }
@@ -35,18 +47,47 @@ export class VollResponse implements IVollResponse {
         return this.response.text();
     }
 
-    constructor() {
-        this.response = new Response();
+    cookie(
+        name: string,
+        value: string | number | object,
+        options?: SerializeOptions
+    ): this {
+        const stringValue =
+            typeof value === "string" ? value : JSON.stringify(value);
+        const cookieOptions = { path: "/", ...options };
+        /**
+         * Convert maxAge from milliseconds to seconds and handle special case for 1 second
+         * If maxAge is present in cookieOptions, convert it from milliseconds to seconds
+         * If maxAge equals 1 second, set an explicit expires date 1 second in the future
+         */
+        if (cookieOptions.maxAge) {
+            cookieOptions.maxAge = millisecondsToSeconds(cookieOptions.maxAge);
+            if (cookieOptions.maxAge === 1) {
+                cookieOptions.expires = new Date(Date.now() + 1000);
+            }
+        }
+        this.cookies.set(name, { value: stringValue, options: cookieOptions });
+        const cookieHeaders = Array.from(this.cookies.entries()).map(
+            ([cookieName, cookieData]) => {
+                return serializeCookie(
+                    cookieName,
+                    cookieData.value,
+                    cookieData.options
+                );
+            }
+        );
+        this.customHeaders["Set-Cookie"] = cookieHeaders.join(",");
+        return this;
+    }
+    clearCookie(name: string, options?: SerializeOptions): this {
+        return this.cookie(name, "", { ...options, expires: new Date(0) });
     }
 
     disablePoweredBy(): this {
         this.poweredBy = false;
         return this;
     }
-
-    private addHeaders(
-        headers: Record<string, string>
-    ): Record<string, string> {
+    private addHeaders(headers: Record<string, string>): Record<string, string> {
         const allHeaders = { ...headers, ...this.customHeaders };
         if (this.poweredBy) {
             return { ...allHeaders, "X-Powered-By": "Voll" };
@@ -83,7 +124,7 @@ export class VollResponse implements IVollResponse {
             headers: this.addHeaders({ "Content-Type": "text/plain" }),
             status: this.response.status,
         });
-        return this.response
+        return this.response;
     }
 
     sendSoap(data: string): Response {
@@ -94,7 +135,7 @@ export class VollResponse implements IVollResponse {
             status: this.response.status,
         });
 
-        return this.response
+        return this.response;
     }
 
     sendStatus(code: number): Response {
@@ -103,18 +144,18 @@ export class VollResponse implements IVollResponse {
             status: code,
         });
 
-        return this.response
+        return this.response;
     }
 
     getResponse(): Response {
-        return this.response
+        return this.response;
     }
 
     setHeader(name: string, value: string): this {
         this.customHeaders[name] = value;
         this.response = new Response(this.response.body, {
             headers: this.addHeaders({}),
-            status: this.response.status
+            status: this.response.status,
         });
         return this;
     }

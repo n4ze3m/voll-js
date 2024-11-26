@@ -7,3 +7,7 @@ export type {
 export type {
     VollConfig
 } from "./types/config"
+
+export type {
+    VollCookie
+} from "./types/cookie"
