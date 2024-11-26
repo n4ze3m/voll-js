@@ -9,14 +9,13 @@ import {
 import { millisecondsToSeconds } from "@/utils/ms-to-sec";
 import { sign, unsign } from 'cookie-signature';
 import { VollSerializeOptions } from "@/types/cookie";
+import { CookieManager } from './cookie-manager';
 
 export class VollResponse implements IVollResponse {
     private response: Response;
     private poweredBy: boolean = true;
     private customHeaders: Record<string, string> = {};
-    private cookieSecret: string = "voll-secret-key";
-    private cookies: Map<string, { value: string; options?: SerializeOptions }> =
-        new Map();
+    private cookieManager: CookieManager = new CookieManager();
     body: any;
     headers: any;
     ok: boolean = true;
@@ -51,58 +50,26 @@ export class VollResponse implements IVollResponse {
     }
 
     signedCookie(name: string, value: string | number | object, options?: SerializeOptions): this {
-        const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-        const jsonValue = typeof value !== 'string' ? `j:${stringValue}` : stringValue;
-        const signedValue = 's:' + sign(jsonValue, this.cookieSecret);
-        return this.cookie(name, signedValue, options);
+        this.cookieManager.signedCookie(name, value, options);
+        this.customHeaders["Set-Cookie"] = this.cookieManager.getSetCookieHeader();
+        return this;
     }
 
-    cookie(
-        name: string,
-        value: string | number | object,
-        options?: VollSerializeOptions
-    ): this {
-        let stringValue =
-            typeof value === "string" ? value : JSON.stringify(value);
-
-        if (options?.signed) {
-            const jsonValue = typeof value !== 'string' ? `j:${stringValue}` : stringValue;
-            stringValue = 's:' + sign(jsonValue, this.cookieSecret);
-            options.signed = undefined;
-        }
-
-        const cookieOptions = { path: "/", ...options };
-        /**
-         * Convert maxAge from milliseconds to seconds and handle special case for 1 second
-         * If maxAge is present in cookieOptions, convert it from milliseconds to seconds
-         * If maxAge equals 1 second, set an explicit expires date 1 second in the future
-         */
-        if (cookieOptions.maxAge) {
-            cookieOptions.maxAge = millisecondsToSeconds(cookieOptions.maxAge);
-            if (cookieOptions.maxAge === 1) {
-                cookieOptions.expires = new Date(0);
-            }
-        }
-        this.cookies.set(name, { value: stringValue, options: cookieOptions });
-        const cookieHeaders = Array.from(this.cookies.entries()).map(
-            ([cookieName, cookieData]) => {
-                return serializeCookie(
-                    cookieName,
-                    cookieData.value,
-                    cookieData.options
-                );
-            }
-        );
-        this.customHeaders["Set-Cookie"] = cookieHeaders.join(",");
+    cookie(name: string, value: string | number | object, options?: VollSerializeOptions): this {
+        this.cookieManager.setCookie(name, value, options);
+        this.customHeaders["Set-Cookie"] = this.cookieManager.getSetCookieHeader();
         return this;
     }
 
     setCookieSecret(secret: string): this {
-        this.cookieSecret = secret;
+        this.cookieManager.setCookieSecret(secret);
         return this;
     }
+
     clearCookie(name: string, options?: VollSerializeOptions): this {
-        return this.cookie(name, "", { ...options, maxAge: undefined,  expires: new Date(0) });
+        this.cookieManager.clearCookie(name, options);
+        this.customHeaders["Set-Cookie"] = this.cookieManager.getSetCookieHeader();
+        return this;
     }
 
     disablePoweredBy(): this {
