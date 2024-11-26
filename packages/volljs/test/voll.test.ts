@@ -12,7 +12,7 @@ describe('Voll', () => {
     })
 
     afterAll(() => {
-        app.stop()
+        app?.stop()
     })
 
     describe('Instance Creation', () => {

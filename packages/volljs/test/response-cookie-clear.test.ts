@@ -11,7 +11,7 @@ describe("Response Cookie Clear Test", () => {
     });
 
     afterAll(() => {
-        app.stop()
+        app?.stop()
     })
 
 

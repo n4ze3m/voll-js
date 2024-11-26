@@ -17,8 +17,8 @@ describe("Request Query Testing", () => {
     });
 
     afterAll(() => {
-        app.stop();
-        appQs.stop();
+        app?.stop();
+        appQs?.stop();
     });
 
     it('should parse arrays in query string', async () => {

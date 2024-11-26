@@ -11,7 +11,7 @@ describe("Response Cookie Test", () => {
     });
 
     afterAll(() => {
-        app.stop()
+        app?.stop()
     })
 
     it('should generate a JSON cookie', async () => {

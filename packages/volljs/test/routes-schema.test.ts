@@ -12,7 +12,7 @@ describe("Route Schema Testing", () => {
     });
 
     afterAll(() => {
-        app.stop();
+        app?.stop();
     });
 
     it("should return 200 when input is valid", async () => {

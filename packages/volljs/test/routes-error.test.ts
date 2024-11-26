@@ -12,7 +12,7 @@ describe("Route Error Testing", () => {
     });
 
     afterAll(() => {
-        app.stop();
+        app?.stop();
     });
 
     it("should return 404 for non-existent route", async () => {
